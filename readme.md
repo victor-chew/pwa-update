@@ -109,3 +109,38 @@ if (reg.waiting) confirmUpdate(reg);
 
 This comes in handy after the `installed` state is first received in `reg.installing.onstatechange` , and he confirmation prompt is  displayed to the user. If the user cancels the prompt and subsequently reloads the page, the `installed` message is never sent again (because the new service worker has already been installed, and there is no change to `sw.js`). If we do not check at this point for a service worker waiting to be activated, the user will not get another chance to update the PWA!
 
+# Displaying version information in upgrade message
+
+The message that we show in ```confirmUpdate()``` is a generic one. I thought it would be a nice touch to let the user know in the message what is the new version he would be upgrading to eg. *"V1.10 is  available. Update?"*
+
+We cannot simply rely on changing the version number in ```confirmUpdate()```, since the event is actually sent to the *previous* version of ```index.js```! Hence we need to ask the new service worker for its version number by posting a message:
+
+```javascript
+function getWorkerVersion(worker) {
+	return new Promise((resolve, reject) => {
+		var channel = new MessageChannel();
+		channel.port1.onmessage = event => {
+			if (!event.data.error) resolve(event.data); else reject(event.data.error);
+		};
+		worker.postMessage('get-version', [ channel.port2 ]);
+	});
+}
+```
+
+and letting the service worker return that info over a [MessageChannel](https://developer.mozilla.org/en-US/docs/Web/API/MessageChannel).
+ 
+ ```javascript
+    if (event.data === 'get-version') return event.ports[0].postMessage(SW_VER);
+```
+
+Our enhanced ```confirmUpdate()``` now looks like this:
+
+```javascript
+function confirmUpdate(reg) {
+	getWorkerVersion(reg.waiting).then(newVer => {
+		if (confirm('New version ' + newVer + ' available. Update?')) {
+			reg.waiting.postMessage('skip-waiting')
+		}
+	});
+}
+```

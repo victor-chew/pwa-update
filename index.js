@@ -1,6 +1,6 @@
 "use strict";
 
-var JS_VER = 'JS0021';
+var JS_VER = 'JS0001';
 
 window.onload = () => {
 
@@ -23,7 +23,25 @@ window.onload = () => {
 };
 
 function confirmUpdate(reg) {
+	getWorkerVersion(reg.waiting).then(newVer => {
+		if (confirm('New version ' + newVer + ' available. Update?')) {
+			reg.waiting.postMessage('skip-waiting')
+		}
+	});
+}
+
+function confirmUpdateSimple(reg) {
 	if (confirm('New version available. Update?')) {
 		reg.waiting.postMessage('skip-waiting')
 	}
 };
+
+function getWorkerVersion(worker) {
+	return new Promise((resolve, reject) => {
+		var channel = new MessageChannel();
+		channel.port1.onmessage = event => {
+			if (!event.data.error) resolve(event.data); else reject(event.data.error);
+		};
+		worker.postMessage('get-version', [ channel.port2 ]);
+	});
+}

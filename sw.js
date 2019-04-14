@@ -1,6 +1,6 @@
 "use strict";
 
-var SW_VER = 'SW0021';
+var SW_VER = 'SW0001';
 
 self.oninstall = event => {
 	console.log(SW_VER + ': oninstall');
@@ -39,4 +39,5 @@ self.onfetch = event => {
 self.onmessage = event => {
 	console.log(SW_VER + ': onmessage = ' + event.data);
 	if (event.data === 'skip-waiting') return skipWaiting();
+	if (event.data === 'get-version') return event.ports[0].postMessage(SW_VER);
 }
